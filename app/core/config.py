@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings,SettingsConfigDict
 from functools import lru_cache
+from dotenv import load_dotenv
+load_dotenv()
 
 class Settings(BaseSettings):
     GCP_PROJECT_ID:str
@@ -14,6 +16,18 @@ class Settings(BaseSettings):
     #safety and limits
     MAX_SQL_RETRIES:int
     MAX_ROWS_RETURNED:int
+
+    #apikey
+    # OPENAI_API_KEY:str
+    OPENROUTER_API_KEY:str
+
+    #obeservability
+    PHOENIX_ENABLED:bool
+    PHOENIX_COLLECTOR_ENDPOINT:str
+
+    MONGO_URI:str
+    MONGO_DB_NAME:str
+
 
     model_config = SettingsConfigDict(
         env_file=".env",

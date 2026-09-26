@@ -11,3 +11,4 @@ wheels/
 .env
 *credentials*.json
 credentials.json
+node_modules/

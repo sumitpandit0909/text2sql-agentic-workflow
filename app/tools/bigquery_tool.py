@@ -18,7 +18,7 @@ def discover_schema(table_name:list[str])->dict:
     Call this before writing SQL so column names are never guessed.
 
     Args:
-        table_name: names of the tables you want to discover
+        table_name: names of the tables you want to discover with dataset name 
 
     Returns:
         dict mapping each table name to a list of (column, type) pairs

@@ -1,8 +1,8 @@
-from google.adk.agents import LlmAgent
-
 from app.core.utils import _settings
-from app.tools.chart_tool import build_chart_config
+from google.adk.agents import LlmAgent
+from google.adk.models.lite_llm import LiteLlm
 
+from app.tools.chart_tool import build_chart_config
 
 VISUALIZE_INSTRUCTION = """
 The user wants to visualize the result of their previous analytical query.
@@ -26,7 +26,7 @@ The prior result rows are available to you in session state under
 
 visualize_agent = LlmAgent(
     name="visualize_agent",
-    model=_settings.ROUTER_MODEL,
+    model=LiteLlm(model=_settings.SYNTHESIS_MODEL),
     description="Builds a Chart.js configuration from the previous query's results when the user explicitly asks to see a chart.",
     instruction=VISUALIZE_INSTRUCTION,
     tools=[build_chart_config],

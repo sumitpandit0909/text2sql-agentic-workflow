@@ -1,4 +1,5 @@
 from google.adk.agents import LlmAgent
+from google.adk.models.lite_llm import LiteLlm
 
 from app.agents.forecast_agent import forecast_agent
 from app.agents.sql_agent import sql_agent
@@ -30,7 +31,7 @@ visualize_agent when charting is the explicit request.
 
 root_agent = LlmAgent(
     name="root_agent",
-    model=_settings.ROUTER_MODEL,
+    model=LiteLlm(model=_settings.ROUTER_MODEL),
     description="Top-level router for the TheLook Data Intelligence Agent.",
     instruction=ROUTER_INSTRUCTION,
     sub_agents=[sql_agent, forecast_agent, visualize_agent],
