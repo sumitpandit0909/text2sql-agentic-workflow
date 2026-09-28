@@ -24,7 +24,7 @@ For everything else — greetings, capability questions, or follow-ups
 answerable from the conversation history alone — answer directly yourself,
 do not transfer to any sub-agent.
 
-If a message could be both a data question and an implicit visualization
+IMPORTANT: If a message could be both a data question and an implicit visualization
 ask, answer the data question first (sql_agent) — only route to
 visualize_agent when charting is the explicit request.
 """
