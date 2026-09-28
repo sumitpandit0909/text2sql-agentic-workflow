@@ -1,7 +1,18 @@
 
 from google.adk.tools import ToolContext
 
-_PALETTE = ["#4F46E5", "#0EA5E9", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"]
+_PALETTE = [
+    "#6366F1",  # Indigo
+    "#06B6D4",  # Cyan
+    "#10B981",  # Emerald
+    "#F59E0B",  # Amber
+    "#EC4899",  # Pink
+    "#8B5CF6",  # Purple
+    "#3B82F6",  # Blue
+    "#14B8A6",  # Teal
+    "#F97316",  # Orange
+    "#E11D48",  # Rose
+]
 
 
 def build_chart_config(
@@ -28,10 +39,18 @@ def build_chart_config(
     """
     if not rows and tool_context is not None:
         sql_res = tool_context.state.get("last_sql_result")
+        if isinstance(sql_res, str):
+            try:
+                import json
+                sql_res = json.loads(sql_res)
+            except Exception:
+                pass
         if isinstance(sql_res, dict) and "rows" in sql_res:
             rows = sql_res["rows"]
         elif isinstance(sql_res, list):
             rows = sql_res
+        elif isinstance(sql_res, dict):
+            rows = [sql_res]
 
     if not rows:
         return {"suitable": False, "reason": "The query returned no rows to chart."}
@@ -47,12 +66,33 @@ def build_chart_config(
         return {"suitable": False, "reason": "Too many categories (>50) for a readable chart — try aggregating first."}
     
     labels = [str(r[label_key]) for r in rows]
-    datasets = [
-        {
+    datasets = []
+
+    for i, key in enumerate(value_keys):
+        dataset = {
             "label": key,
             "data": [r[key] for r in rows],
-            "backgroundColor": _PALETTE[i % len(_PALETTE)],
         }
-        for i, key in enumerate(value_keys)
-    ]
+
+        if chart_type in ("pie", "doughnut"):
+            # Each pie slice represents a category, so it must have a distinct color
+            dataset["backgroundColor"] = [
+                _PALETTE[j % len(_PALETTE)] for j in range(len(rows))
+            ]
+            dataset["borderColor"] = "#161922"
+            dataset["borderWidth"] = 2
+        elif chart_type == "line":
+            color = _PALETTE[i % len(_PALETTE)]
+            dataset["borderColor"] = color
+            dataset["backgroundColor"] = color + "26"  # 15% opacity fill
+            dataset["tension"] = 0.35
+            dataset["fill"] = True
+            dataset["pointRadius"] = 4
+        else:  # bar
+            # Single uniform color per metric series (clean, non-rainbow bars)
+            dataset["backgroundColor"] = _PALETTE[i % len(_PALETTE)]
+            dataset["borderRadius"] = 6
+
+        datasets.append(dataset)
+
     return {"suitable": True, "chart": {"type": chart_type, "labels": labels, "datasets": datasets}}

@@ -50,8 +50,8 @@ sql_worker_agent = LlmAgent(
     description="Generates and executes BigQuery SQL for TheLook e-commerce questions.",
     instruction=SQL_WORKER_INSTRUCTION,
     tools=[execute_sql],
-    output_key="last_sql_result",
 )
+
 
 SQL_CHECK_INSTRUCTION = """
 Look at the value in state key `last_sql_result`.

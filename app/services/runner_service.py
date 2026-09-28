@@ -10,6 +10,7 @@ from google.adk.models.lite_llm import LiteLlm
 from app.agents.root_agent import root_agent
 from app.core.utils import _settings
 from app.schemas.agent_outputs import ChartAnswer, ForecastAnswer, SqlAnswer
+from app.services.mongo_session_service import MongoSessionService
 
 APP_NAME = "thelook_genai_agent"
 
@@ -22,8 +23,11 @@ app = App(
         summarizer=LlmEventSummarizer(llm=LiteLlm(model=_settings.ROUTER_MODEL)),  # cheap model summarize ke liye
     ),
 )
-_session_service = InMemorySessionService()
-_runner = Runner(app=app,session_service=_session_service)
+_session_service = MongoSessionService(
+    mongo_uri=_settings.MONGO_URI,
+    db_name=_settings.MONGO_DB_NAME,
+)
+_runner = Runner(app=app, session_service=_session_service)
 
 
 async def ensure_session(user_id:str,session_id:str)->None:
@@ -42,6 +46,8 @@ _TOOL_STATUS_MESSAGES = {
     "run_ai_forecast": "Generating forecast...",
     "build_chart_config": "Building chart...",
 }
+
+
 _AGENT_STATUS_MESSAGES = {
     "sql_worker_agent": "Analyzing your question and writing SQL...",
     "sql_synthesis_agent": "Writing your answer...",

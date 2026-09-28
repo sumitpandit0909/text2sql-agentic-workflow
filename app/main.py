@@ -6,6 +6,7 @@ from app.api.routes_chat import router as chat_router
 from app.core.observability import setup_observability
 
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_observability()
