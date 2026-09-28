@@ -1,0 +1,4 @@
+sources:
+  thelook-bq:
+    kind: bigquery
+    project: youri-506314
