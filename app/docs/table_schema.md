@@ -1,4 +1,5 @@
 # TheLook E-commerce — Table Schema Reference
+> **IMPORTANT:** Every SQL query MUST use fully-qualified table names in the exact form `bigquery-public-data.thelook_ecommerce.<table>` (in backticks) — never bare table names like `orders` or `order_items` alone.
 
 Source: `bigquery-public-data.thelook_ecommerce`
 Verified via live queries — enum values below are exact, not guessed.
@@ -87,8 +88,8 @@ Denormalized per-unit copy of product info at time of stocking. Use `orders`/`or
 
 ## Common query patterns
 
-- **Revenue**: `SUM(order_items.sale_price)`, filtered by `order_items.status != 'Cancelled'` for realized revenue.
-- **Order volume**: `COUNT(*)` on `orders`, grouped by `DATE(created_at)`.
-- **User growth**: `COUNT(*)` on `users`, grouped by `DATE(created_at)`.
-- **Current inventory level**: `COUNT(*)` on `inventory_items` WHERE `sold_at IS NULL`.
-- **Top products**: join `order_items` -> `products` on `product_id`.
+- **Revenue**: `SUM(sale_price)` from `bigquery-public-data.thelook_ecommerce.order_items`, filtered by `status != 'Cancelled'` for realized revenue.
+- **Order volume**: `COUNT(*)` from `bigquery-public-data.thelook_ecommerce.orders`, grouped by `DATE(created_at)`.
+- **User growth**: `COUNT(*)` from `bigquery-public-data.thelook_ecommerce.users`, grouped by `DATE(created_at)`.
+- **Current inventory level**: `COUNT(*)` from `bigquery-public-data.thelook_ecommerce.inventory_items` WHERE `sold_at IS NULL`.
+- **Top products**: join `bigquery-public-data.thelook_ecommerce.order_items` -> `bigquery-public-data.thelook_ecommerce.products` on `product_id`.

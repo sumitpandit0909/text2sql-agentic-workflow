@@ -3,6 +3,7 @@ from google.adk.models.lite_llm import LiteLlm
 
 from app.core.utils import _settings
 from app.tools.forecast_tool import run_ai_forecast
+from app.schemas.agent_outputs import ForecastAnswer
 
 
 FORECAST_INSTRUCTION = """
@@ -24,6 +25,7 @@ for TheLook E-commerce using BigQuery ML's AI.FORECAST.
 forecast_agent = LlmAgent(
     name="forecast_agent",
     model=LiteLlm(model=_settings.FORECAST_MODEL),
+    output_schema=ForecastAnswer,
     description="Produces and explains time-series forecasts (e.g. 'forecast sales for next month') using BigQuery ML AI.FORECAST.",
     instruction=FORECAST_INSTRUCTION,
     tools=[run_ai_forecast],

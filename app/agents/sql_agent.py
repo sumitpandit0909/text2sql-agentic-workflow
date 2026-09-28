@@ -6,7 +6,8 @@ from google.adk.tools import exit_loop
 from google.adk.models.lite_llm import LiteLlm
 
 from app.core.utils import _settings
-from app.tools.bigquery_tool import ALLOWED_TABLES, discover_schema, execute_sql
+from app.tools.bigquery_tool import  execute_sql
+from app.schemas.agent_outputs import SqlAnswer
 
 
 logger = logging.getLogger(__name__)
@@ -78,20 +79,23 @@ sql_retry_loop = LoopAgent(
 
 
 SQL_SYNTHESIS_INSTRUCTION = """
-Look at state key `last_sql_result`.
+You write the final answer for a data question. Use ONLY the results of
+the execute_sql tool calls visible in this conversation.
 
-If it has a "rows" key, synthesize a clear natural-language answer to the
-original question using only those numbers, and include the SQL from its
-"sql_executed" field.
+- If the last execute_sql call succeeded: status="success". Fill `answer`
+  with a direct 1-4 sentence answer, `key_figures` with the important
+  numbers (label + value as returned), `sql` with the exact SQL that ran
+  (the "sql_executed" value), and `row_count`.
+- If no execute_sql call succeeded: status="failed", give `failure_reason`
+  in plain language (never a stack trace), and set `sql`/`row_count` to null.
 
-If it still has an "error" key, tell the user plainly that the query
-could not be completed and briefly say why — never expose raw stack
-traces.
+Never invent numbers.
 """
 
 sql_synthesis_agent = LlmAgent(
     name="sql_synthesis_agent",
     model=LiteLlm(model=_settings.SYNTHESIS_MODEL),
+    output_schema=SqlAnswer,
     description="Synthesizes the final natural-language answer from the SQL retry loop's result.",
     instruction=SQL_SYNTHESIS_INSTRUCTION,
 )

@@ -16,11 +16,15 @@ async def chat(req: ChatRequest) -> StreamingResponse:
 
     async def event_stream():
         answer_chunks: list[str] = []
+        meta: dict = {}
         async for event in stream_agent_reply(req.user_id, req.session_id, req.message):
             yield json.dumps(event) + "\n"
             if event["type"] == "text":
                 answer_chunks.append(event["content"])
-        full_answer = "".join(answer_chunks)
-        await mongo_service.save_turn(req.user_id, req.session_id, "agent", full_answer)
+            elif event["type"] == "answer":
+                d = event["data"]
+                answer_chunks.append(d.get("answer") or d.get("summary") or d.get("message") or "")
+                meta = {"workflow": event["workflow"], **d}
+        await mongo_service.save_turn(req.user_id, req.session_id, "agent", "".join(answer_chunks), meta)
 
     return StreamingResponse(event_stream(), media_type="application/x-ndjson")

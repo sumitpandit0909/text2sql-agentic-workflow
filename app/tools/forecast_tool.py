@@ -1,6 +1,14 @@
 from app.core.utils import _get_client, _settings
+from google.adk.tools import ToolContext
 
-def run_ai_forecast(metric_table: str,timestamp_col:str,value_col:str, horizon:int=30)->dict:
+
+def run_ai_forecast(
+    metric_table: str,
+    timestamp_col: str,
+    value_col: str,
+    horizon: int = 30,
+    tool_context: ToolContext | None = None,
+) -> dict:
     """Forecast a time-series metric using BigQuery ML's AI.FORECAST.
 
     Args:
@@ -15,7 +23,7 @@ def run_ai_forecast(metric_table: str,timestamp_col:str,value_col:str, horizon:i
         on success, or {"error": "..."} on failure.
     """
     agg = "COUNT(*)" if value_col == "*" else f"SUM({value_col})"
-    history_sql= f"""
+    history_sql = f"""
         WITH daily AS (
           SELECT DATE({timestamp_col}) AS ds, {agg} AS y
           FROM `{_settings.BQ_DATASET}.{metric_table}`
@@ -29,20 +37,27 @@ def run_ai_forecast(metric_table: str,timestamp_col:str,value_col:str, horizon:i
         )
     """
 
-    client =_get_client()
+    client = _get_client()
     try:
-        rows=[dict(r) for r in client.query(history_sql).result()]
-        forecast=[
+        rows = [dict(r) for r in client.query(history_sql).result()]
+        forecast = [
             {
-                "date": str(r.get("forecast_timestamp")),
+                "date": str(r.get("forecast_timestamp"))[:10],
                 "value": r.get("forecast_value"),
                 "lower": r.get("prediction_interval_lower_bound"),
                 "upper": r.get("prediction_interval_upper_bound"),
             }
             for r in rows
         ]
-
-        return {"forecast":forecast}
+        res = {"forecast": forecast}
+        if tool_context is not None:
+            tool_context.state["last_forecast_result"] = res
+            # Allow visualize_agent to chart forecasts as well
+            tool_context.state["last_sql_result"] = {"rows": forecast, "row_count": len(forecast)}
+        return res
 
     except Exception as exc:
-        return {"error":f"BigQuery forecast error: {exc}"}
+        err = {"error": f"BigQuery forecast error: {exc}"}
+        if tool_context is not None:
+            tool_context.state["last_forecast_result"] = err
+        return err

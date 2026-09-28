@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import ChartRenderer from "./ChartRenderer.jsx";
+import AnswerCard from "./AnswerCard.jsx";
 
 function newId() {
   return crypto.randomUUID();
@@ -9,7 +10,7 @@ export default function App() {
   const [sessionId, setSessionId] = useState(() => newId());
   const [userId, setUserId] = useState("dev-user");
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([]); // {id, role, kind, content, chart, statusTrail}
+  const [messages, setMessages] = useState([]); // {id, role, kind, content, answer, chart, statusTrail}
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef(null);
 
@@ -26,7 +27,15 @@ export default function App() {
     setMessages((m) => [
       ...m,
       userMsg,
-      { id: agentMsgId, role: "agent", kind: "pending", content: "", chart: null, statusTrail: [] },
+      {
+        id: agentMsgId,
+        role: "agent",
+        kind: "pending",
+        content: "",
+        answer: null,
+        chart: null,
+        statusTrail: [],
+      },
     ]);
     setInput("");
     setBusy(true);
@@ -53,9 +62,13 @@ export default function App() {
 
         for (const line of lines) {
           if (!line.trim()) continue;
-          const event = JSON.parse(line);
-          applyEvent(agentMsgId, event);
+          applyEvent(agentMsgId, JSON.parse(line));
         }
+      }
+
+      // stream khatam: agar aakhri line bina newline ke aayi ho
+      if (buffer.trim()) {
+        applyEvent(agentMsgId, JSON.parse(buffer));
       }
     } catch (err) {
       applyEvent(agentMsgId, { type: "text", content: `[Error: ${err.message}]` });
@@ -70,6 +83,10 @@ export default function App() {
         if (m.id !== agentMsgId) return m;
         if (event.type === "status") {
           return { ...m, kind: "pending", statusTrail: [...m.statusTrail, event.message] };
+        }
+        if (event.type === "answer") {
+          // structured answer: sql / forecast / chart workflows
+          return { ...m, kind: "final", answer: { workflow: event.workflow, ...event.data } };
         }
         if (event.type === "chart") {
           return { ...m, kind: "final", chart: event.chart };
@@ -131,6 +148,7 @@ export default function App() {
                 </div>
               )}
               {m.content && <div className="bubble-text">{m.content}</div>}
+              {m.answer && <AnswerCard answer={m.answer} />}
               {m.chart && <ChartRenderer config={m.chart} />}
               {m.kind === "pending" && !m.content && m.statusTrail.length === 0 && (
                 <span className="typing-dots">

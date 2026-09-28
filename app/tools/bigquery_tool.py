@@ -1,5 +1,7 @@
 import re
+from google.adk.tools import ToolContext
 from google.cloud import bigquery
+
 from app.core.config import get_settings
 from app.core.utils import _get_client
 from app.core.utils import ALLOWED_TABLES
@@ -57,7 +59,9 @@ def validate_sql(sql:str)->tuple[bool,str]:
         return False, f"Query must reference the {_settings.BQ_DATASET} dataset."
     return True, ""
 
-def execute_sql(sql:str)->dict:
+
+
+def execute_sql(sql: str, tool_context: ToolContext | None = None) -> dict:
     """Validate and run  a SELECT query agains bigquery
     
     Args:
@@ -68,12 +72,15 @@ def execute_sql(sql:str)->dict:
         call this tool again — do not give up after one failure, but do not
         retry more than the configured maximum either.
     """
-    ok,reason = validate_sql(sql)
+    ok, reason = validate_sql(sql)
 
     if not ok:
-        return {"error":f"Validation failed: {reason}"}
+        err = {"error": f"Validation failed: {reason}"}
+        if tool_context is not None:
+            tool_context.state["last_sql_result"] = err
+        return err
     
-    bounded_sql= sql.rstrip(";")
+    bounded_sql = sql.rstrip(";")
     if "limit" not in bounded_sql.lower():
         bounded_sql = f"{bounded_sql} LIMIT {_settings.MAX_ROWS_RETURNED}"
     
@@ -82,7 +89,13 @@ def execute_sql(sql:str)->dict:
     try:
         job = client.query(bounded_sql)
         rows = [dict(row) for row in job.result()]
-        return {"rows": rows, "row_count": len(rows), "sql_executed": bounded_sql}
+        res = {"rows": rows, "row_count": len(rows), "sql_executed": bounded_sql}
+        if tool_context is not None:
+            tool_context.state["last_sql_result"] = res
+        return res
     except Exception as exc:  # noqa: BLE001
-        return {"error": str(exc)}
+        err = {"error": str(exc)}
+        if tool_context is not None:
+            tool_context.state["last_sql_result"] = err
+        return err
     
