@@ -1,0 +1,81 @@
+services:
+  # 1. MongoDB Service (Enterprise Session Persistence)
+  mongodb:
+    image: mongo:latest
+    container_name: thelook-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - thelook-network
+
+  # 2. Google Database MCP Toolbox Service (BigQuery Access Layer)
+  mcp-toolbox:
+    image: us-central1-docker.pkg.dev/database-toolbox/toolbox:1.13.1
+    container_name: thelook-toolbox
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./tools.yaml:/tools.yaml:ro
+      - ${USERPROFILE:-$HOME}/.config/gcloud:/root/.config/gcloud:ro
+    command: ["--tools-file", "/tools.yaml", "--address", "0.0.0.0", "--port", "5000"]
+    networks:
+      - thelook-network
+
+  # 3. FastAPI Backend & ADK Agent Service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: thelook-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+      - TOOLBOX_URL=http://mcp-toolbox:5000
+      - PHOENIX_COLLECTOR_ENDPOINT=http://phoenix:6006/v1/traces
+    volumes:
+      - ${USERPROFILE:-$HOME}/.config/gcloud:/root/.config/gcloud:ro
+    depends_on:
+      - mongodb
+      - mcp-toolbox
+      - phoenix
+    networks:
+      - thelook-network
+
+  # 4. Arize Phoenix Observability Service (OpenTelemetry Traces & Spans)
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: thelook-phoenix
+    restart: unless-stopped
+    ports:
+      - "6006:6006"
+    networks:
+      - thelook-network
+
+  # 4. React Frontend Service (Served via Nginx)
+  frontend:
+    build:
+      context: ./thelook-frontend
+      dockerfile: Dockerfile
+    container_name: thelook-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - thelook-network
+
+volumes:
+  mongo_data:
+
+networks:
+  thelook-network:
+    driver: bridge
